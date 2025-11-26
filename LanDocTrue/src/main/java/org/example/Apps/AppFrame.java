@@ -19,7 +19,6 @@ import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.*;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.example.Estetica.Cores.*;
 import static org.example.Estetica.Fontes.*;
@@ -28,10 +27,10 @@ public class AppFrame extends JFrame {
 
     // variáveis gerais
     private JButton btnDeslogar, btnRecarregar;
-    public JTextField txtNomeResposavel, txtEmail, txtSUS, txtAuxilio, txtRestricaoAlimentar, txtProblemasSaude, txtEndereco,
+    public JTextField txtNomeResposavel, txtEmail, txtAuxilio, txtRestricaoAlimentar, txtProblemasSaude, txtEndereco,
             txtNumCasa, txtPontoReferencia, txtBairro, txtEmprego, txtLocalEmprego, txtNomeAluno;
     JFormattedTextField txtCpfResponsavel, txtTel, txtTel2, txtRGResponsavel, txtRGAluno, txtDataNascimentoAluno,
-            txtDataNascimentoResponsavel, txtCpfAluno;
+            txtDataNascimentoResponsavel, txtCpfAluno, txtSUS;
     JComboBox<String> cbEtnia, cbRenda, cbParentesco, cbMunicipio, cbUF;
     DefaultComboBoxModel<String> comboBoxModelAlunos;
     ComboBoxDinamico cbDeficiencias, cbAlergias, cbAlunos;
@@ -496,7 +495,6 @@ public class AppFrame extends JFrame {
                 }
                 JOptionPane.showMessageDialog(this, "Responsável Criado Com Sucesso!");
                 limparCamposResponsavel();
-                pegarValores("Responsáveis");
 
             } catch (SQLException e) {
                 JOptionPane.showMessageDialog(this, "Erro ao Salvar Responsável: " + e.getMessage(),
@@ -775,8 +773,33 @@ public class AppFrame extends JFrame {
         gbc.gridy++;
         pnlCampos.add(criarLabel("Cadastro Nacional de Saúde (SUS): "), gbc);
         gbc.gridx = 1;
-        txtSUS = new JTextField();
+        txtSUS = new JFormattedTextField();
         estilizarTextField(txtSUS, null);
+        try{
+            MaskFormatter mask = new MaskFormatter("### #### #### ####");
+            mask.setPlaceholderCharacter('_');
+            mask.setOverwriteMode(true);
+            mask.setValidCharacters("0123456789");
+            mask.setCommitsOnValidEdit(true);
+            mask.setValueContainsLiteralCharacters(false);
+            mask.install(txtSUS);
+            txtSUS.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusGained(FocusEvent e) {
+                    JFormattedTextField field = (JFormattedTextField) e.getSource();
+                    String texto = field.getText();
+                    int firstPlaceHolder = texto.indexOf('_');
+                    if (firstPlaceHolder == -1) {
+                        field.setCaretPosition(texto.length());
+                    } else {
+                        field.setCaretPosition(firstPlaceHolder);
+                    }
+                }
+            });
+
+        } catch (ParseException e) {
+            throw new RuntimeException(e);
+        }
         pnlCampos.add(txtSUS, gbc);
 
         gbc.gridx = 0;
@@ -884,7 +907,6 @@ public class AppFrame extends JFrame {
                 JOptionPane.showMessageDialog(this, "Aluno Criado Com Sucesso!");
                 limparCamposAluno();
                 cbAlunos = new ComboBoxDinamico("Alunos");
-                configurarTabela(tabelaAlunos);
 
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
@@ -960,7 +982,7 @@ public class AppFrame extends JFrame {
             case ("Lista de Alunos") -> {
                 modeloTabela.setColumnIdentifiers(new String[]{"ID", "NOME", "CPF", "SEXO",
                         "DATA NASCIMENTO", "DEFICIÊNCIAS", "ALERGIAS", "PROBLEMAS DE SAÚDE",
-                        "RESTRIÇÃO ALIMENTAR", "TURMA", "PERIODO", "RESPONSÁVEL", "IDB"});
+                        "RESTRIÇÃO ALIMENTAR", "ENDEREÇO", "BAIRRO", "RESPONSÁVEL", "IDB"});
                 sorter.setComparator(0, Comparator.comparingLong(o -> Long.parseLong(o.toString())));
                 sorter.setComparator(5, Comparator.comparingLong(o -> Long.parseLong(o.toString())));
                 tabelaAlunos = tabela;
@@ -1096,8 +1118,8 @@ public class AppFrame extends JFrame {
                         aluno.getAlergias(),
                         aluno.getProblemaSaude(),
                         aluno.getRestricaoAlimentar(),
-                        aluno.getTurma(),
-                        aluno.getPeriodoCursando(),
+                        aluno.getEndereco(),
+                        aluno.getBairro(),
                         nomeResponsavel,
                         aluno.getIdAluno()
                 });
@@ -1179,9 +1201,13 @@ public class AppFrame extends JFrame {
         chkSexoMResponsavel.setSelected(false);
         chkSexoFResponsavel.setForeground(TEXTO_CLARO);
         chkSexoMResponsavel.setForeground(TEXTO_CLARO);
+        txtEmprego.setText("");
+        txtLocalEmprego.setText("");
         cbEtnia.setSelectedIndex(0);
         txtEmail.setText("");
         txtTel.setText("");
+        txtTel2.setText("");
+        chkResponsavelLegal.setSelected(false);
         cbParentesco.setSelectedIndex(0);
         cbRenda.setSelectedIndex(0);
         txtAuxilio.setText("");
@@ -1602,25 +1628,22 @@ public class AppFrame extends JFrame {
                 .toList();
 
         private final String[] deficiencias = {"Nenhuma", "Altas Habilidades (superdotação)", "Cegueira",
-                "Deficiência Auditiva (surdez leve ou moderada)", "Deficiência Auditiva (surdez severa ou profunda)",
-                "Deficiência Auditiva (processamento central)", "Deficiência Visual (baixa visão)",
-                "Deficiência Física (cadeirante) - permanente", "Deficiência Física (paralisia cerebral)",
-                "Deficiência Física (paraplegia ou monoplegia)", "Deficiência Física (outros)", "Disfemia (gagueira)",
-                "Deficiência intelectual", "Sensorial Alta (sensibilidade)", "Sensorial Baixa (sensibilidade)",
-                "Deficiência mental", "Espectro Autista Nível I", "Espectro Autista Nível II",
-                "Espectro Autista Nível III", "Estrabismo", "Surdo", "Síndrome de Down", "TEA", "TDAH", "TOD", "Outra"};
+                "Deficiência Auditiva (processamento central)", "Deficiência Auditiva (surdez leve ou moderada)",
+                "Deficiência Auditiva (surdez severa ou profunda)", "Deficiência Física (cadeirante) - permanente",
+                "Deficiência Física (outros)", "Deficiência Física (paralisia cerebral)",
+                "Deficiência Física (paraplegia ou monoplegia)", "Deficiência intelectual", "Deficiência mental",
+                "Deficiência Visual (baixa visão)", "Disfemia (gagueira)", "Espectro Autista Nível I",
+                "Espectro Autista Nível II", "Espectro Autista Nível III", "Estrabismo",
+                "Sensorial Alta (sensibilidade)", "Sensorial Baixa (sensibilidade)", "Síndrome de Down", "Surdo",
+                "TDAH", "TEA", "TOD", "Outra"};
 
-        private final String[] alergias = {"Nenhuma", "Amendoim", "Castanhas", "Leite de vaca", "Ovo",
-                "Soja", "Trigo", "Peixe", "Frutos do mar",
-                "Mariscos", "Glúten", "Lactose", "Corantes artificiais",
-                "Conservantes", "Adoçantes artificiais",
-                "Frutas cítricas", "Tomate", "Chocolate", "Pólen",
-                "Ácaros", "Fungos/mofo", "Pelos de animais", "Picada de abelha",
-                "Picada de formiga", "Latex", "Penicilina e outros antibióticos",
-                "Anti-inflamatórios", "Anticonvulsivantes",
-                "Insulina", "Iodo", "Perfumes/fragrâncias", "Produtos de beleza", "Detergentes",
-                "Látex", "Sol (fotossensibilidade)", "Calor", "Frio", "Água (urticária aquagênica)",
-                "Exercício físico", "Outra"};
+        private final String[] alergias = {"Nenhuma","Ácaros", "Adoçantes artificiais", "Amendoim", "Água (urticária aquagênica)",
+                "Anti-inflamatórios", "Anticonvulsivantes", "Calor", "Castanhas", "Chocolate", "Conservantes",
+                "Corantes artificiais", "Detergentes", "Exercício físico", "Frio", "Frutas cítricas", "Frutos do mar",
+                "Fungos/mofo", "Glúten", "Iodo", "Insulina", "Lactose", "Látex", "Leite de vaca", "Mariscos", "Ovo",
+                "Pelos de animais", "Penicilina e outros antibióticos", "Perfumes/fragrâncias", "Peixe", "Picada de abelha",
+                "Picada de formiga", "Pólen", "Produtos de beleza", "Sol (fotossensibilidade)", "Soja", "Tomate",
+                "Trigo", "Outra"};
 
         private final String[] alunos = nomes.toArray(new String[0]);
         private final String tipoCB;
@@ -1643,7 +1666,7 @@ public class AppFrame extends JFrame {
             scrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI(VERDE_PRINCIPAL));
             scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI(VERDE_PRINCIPAL));
             scrollPane.setBorder(BorderFactory.createEmptyBorder());
-            scrollPane.setPreferredSize(new Dimension(460, 120));
+            scrollPane.setPreferredSize(new Dimension(530, 120));
             scrollPane.getVerticalScrollBar().setUnitIncrement(16);
 
             adicionarNovaLinha();
@@ -1862,6 +1885,7 @@ public class AppFrame extends JFrame {
                     BorderFactory.createLineBorder(VERDE_SECUNDARIO, 1),
                     BorderFactory.createEmptyBorder(5, 5, 5, 5)
             ));
+            comboBox.setPreferredSize(new Dimension(455,43));
         }
 
         public List<String> getSelecoes() {
